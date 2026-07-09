@@ -1,0 +1,87 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up JDK 21
+      uses: actions/setup-java@v3
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+
+    - name: Build with Gradle
+      run: |
+        chmod +x gradlew
+        ./gradlew build -x test
+
+    - name: Run unit tests
+      run: ./gradlew test
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: jar-file
+        path: build/libs/
+
+    - name: Check for security vulnerabilities
+      uses: owasp/dependency-check-action@v6
+      with:
+        project: 'pnc-parcial-final-hotel'
+        format: 'ALL'
+
+    - name: Scan repository for secrets (gitleaks)
+      uses: zricethezav/gitleaks-action@v1
+      with:
+        args: detect --source . --exit-code 1
+
+  docker:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Build Docker image
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        push: false
+        tags: hotel-api:latest
+
+  security-scan:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: Upload Trivy results
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+
