@@ -1,3 +1,21 @@
 spring:
   application:
     name: pnc-parcial-final-hotel
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/hotel_db}
+    driver-class-name: org.postgresql.Driver
+    username: ${SPRING_DATASOURCE_USERNAME:hotel_user}
+    password: ${SPRING_DATASOURCE_PASSWORD:hotel_pass}
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+
+jwt:
+  secret: ${JWT_SECRET:change-this-secret-in-production-1234567890}
+  access-token-expiration-minutes: 15
+  refresh-token-expiration-days: 7
